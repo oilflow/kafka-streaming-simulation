@@ -1,0 +1,98 @@
+version: '3'
+
+services:
+  kafka_broker_1:
+    image: bitnami/kafka:latest
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_LISTENER_NAME_EXTERNAL=EXTERNAL
+      - KAFKA_LISTENER_NAME_INTERNAL=INTERNAL
+      - KAFKA_LISTENERS=EXTERNAL://0.0.0.0:9092,INTERNAL://0.0.0.0:19092
+      - KAFKA_ADVERTISED_LISTENERS=EXTERNAL://localhost:9092,INTERNAL://kafka_broker_1:19092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=EXTERNAL:PLAINTEXT,INTERNAL:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_DEFAULT_REPLICATION_FACTOR=2
+    ports:
+      - 9092:9092
+    networks:
+      - kafka_network
+
+  kafka_broker_2:
+    image: bitnami/kafka:latest
+    environment:
+      - KAFKA_BROKER_ID=2
+      - KAFKA_LISTENER_NAME_EXTERNAL=EXTERNAL
+      - KAFKA_LISTENER_NAME_INTERNAL=INTERNAL
+      - KAFKA_LISTENERS=EXTERNAL://0.0.0.0:9093,INTERNAL://0.0.0.0:19093
+      - KAFKA_ADVERTISED_LISTENERS=EXTERNAL://localhost:9093,INTERNAL://kafka_broker_2:19093
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=EXTERNAL:PLAINTEXT,INTERNAL:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+    ports:
+      - 9093:9093
+    networks:
+      - kafka_network
+
+  kafka_broker_3:
+    image: bitnami/kafka:latest
+    environment:
+      - KAFKA_BROKER_ID=3
+      - KAFKA_LISTENER_NAME_EXTERNAL=EXTERNAL
+      - KAFKA_LISTENER_NAME_INTERNAL=INTERNAL
+      - KAFKA_LISTENERS=EXTERNAL://0.0.0.0:9094,INTERNAL://0.0.0.0:19094
+      - KAFKA_ADVERTISED_LISTENERS=EXTERNAL://localhost:9094,INTERNAL://kafka_broker_3:19094
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=EXTERNAL:PLAINTEXT,INTERNAL:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+    ports:
+      - 9094:9094
+    networks:
+      - kafka_network
+
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    environment:
+      - ZOO_SERVERS=server.1=zookeeper:2888:3888
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - 2181:2181
+    networks:
+      - kafka_network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka_broker_1:19092,kafka_broker_2:19093,kafka_broker_3:19094
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
+      - KAFKA_CLUSTERS_0_SECURITY_PROTOCOL=PLAINTEXT
+    ports:
+      - 8888:8080
+    networks:
+      - kafka_network
+    depends_on:
+      - kafka_broker_1
+      - kafka_broker_2
+      - kafka_broker_3
+      - zookeeper
+
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER_FOR_MAIN_DB}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_FOR_MAIN_DB}
+      POSTGRES_DB: ${POSTGRES_MAIN_DB}
+    ports:
+      - "5432:5432"
+    networks:
+      - kafka_network
+    volumes:
+      - pg_db_users_reg:/var/lib/postgresql/data
+
+networks:
+  kafka_network:
+    driver: bridge
+
+volumes:
+  pg_db_users_reg:
